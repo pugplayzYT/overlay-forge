@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -73,7 +74,7 @@ internal fun OverlayForgeApp() {
                         offsetY = 0f
                         overlayScale = 1f
                     }
-                    .onFailure { snackbar.showSnackbar("Could not open that media: ${it.message}") }
+                    .onFailure { snackbar.showSnackbar("Could not open that media: ${it.message ?: "unknown error"}") }
             }
         }
     }
@@ -116,7 +117,7 @@ internal fun OverlayForgeApp() {
                         },
                         onError = {
                             exporting = false
-                            scope.launch { snackbar.showSnackbar("Video export failed: ${it.message}") }
+                            scope.launch { snackbar.showSnackbar("Video export failed: ${it.message ?: "unknown error"}") }
                         }
                     )
                 } else {
@@ -132,7 +133,7 @@ internal fun OverlayForgeApp() {
                 }
             } catch (t: Throwable) {
                 exporting = false
-                snackbar.showSnackbar("Export failed: ${t.message}")
+                snackbar.showSnackbar("Export failed: ${t.message ?: t::class.simpleName ?: "unknown error"}")
             }
         }
     }
@@ -151,6 +152,7 @@ internal fun OverlayForgeApp() {
             AppHeader(
                 exporting = exporting,
                 progress = exportProgress,
+                canExport = media != null,
                 onImport = { picker.launch(arrayOf("image/*", "video/*")) },
                 onExport = ::beginExport
             )
@@ -160,6 +162,7 @@ internal fun OverlayForgeApp() {
             Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
+                .navigationBarsPadding()
         ) {
             val wide = maxWidth >= 900.dp
             if (wide) {
@@ -204,11 +207,15 @@ internal fun OverlayForgeApp() {
                     )
                 }
             } else {
+                val portraitMedia = (media?.aspectRatio ?: (16f / 9f)) < 0.9f
+                val previewWeight = if (portraitMedia) 1f else .72f
+                val editorWeight = if (portraitMedia) 1f else 1.28f
+
                 Column(
                     Modifier
                         .fillMaxSize()
-                        .padding(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                        .padding(horizontal = 10.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     PreviewPanel(
                         media = media,
@@ -228,7 +235,7 @@ internal fun OverlayForgeApp() {
                             overlayScale = 1f
                         },
                         onWebViewReady = { webView = it },
-                        modifier = Modifier.fillMaxWidth().weight(1.05f)
+                        modifier = Modifier.fillMaxWidth().weight(previewWeight)
                     )
                     EditorPanel(
                         selectedTab = selectedTab,
@@ -241,7 +248,7 @@ internal fun OverlayForgeApp() {
                             html = SAMPLE_HTML
                             css = SAMPLE_CSS
                         },
-                        modifier = Modifier.fillMaxWidth().weight(.95f)
+                        modifier = Modifier.fillMaxWidth().weight(editorWeight)
                     )
                 }
             }
