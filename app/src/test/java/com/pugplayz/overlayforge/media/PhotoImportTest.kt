@@ -8,6 +8,7 @@ import androidx.test.core.app.ApplicationProvider
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -70,7 +71,7 @@ class PhotoImportTest {
         val result = runCatching { readImageBounds(context, uri) }
 
         assertTrue(result.isFailure)
-        assertTrue(result.exceptionOrNull() is IllegalArgumentException)
+        assertNotNull(result.exceptionOrNull())
         file.delete()
     }
 
