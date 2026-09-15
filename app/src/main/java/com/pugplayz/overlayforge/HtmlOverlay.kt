@@ -52,6 +52,8 @@ internal fun HtmlOverlay(
                 settings.javaScriptEnabled = false
                 settings.allowFileAccess = false
                 settings.allowContentAccess = false
+                settings.textZoom = 100
+                settings.setSupportZoom(false)
                 webViewClient = WebViewClient()
                 view = this
                 onWebViewReady(this)
@@ -101,16 +103,34 @@ private fun buildHtmlDocument(html: String, css: String): String = """
 <!doctype html>
 <html>
 <head>
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="viewport" content="width=device-width, height=device-height, initial-scale=1, maximum-scale=1, user-scalable=no">
 <style>
+:root {
+  --of-vw: 1vw;
+  --of-vh: 1vh;
+  --of-vmin: 1vmin;
+  --of-vmax: 1vmax;
+}
 html, body {
   margin: 0;
+  padding: 0;
   width: 100%;
   height: 100%;
   overflow: hidden;
   background: transparent !important;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
-* { box-sizing: border-box; }
+body {
+  position: relative;
+}
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+img, svg, video, canvas {
+  max-width: 100%;
+  max-height: 100%;
+}
 $css
 </style>
 </head>
