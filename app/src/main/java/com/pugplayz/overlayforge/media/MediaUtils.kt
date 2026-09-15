@@ -10,6 +10,7 @@ import android.os.Environment
 import android.provider.MediaStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlin.math.roundToInt
 
 data class MediaInfo(
     val uri: Uri,
@@ -54,6 +55,29 @@ suspend fun readMediaInfo(context: Context, uri: Uri): MediaInfo = withContext(D
             decoder.setTargetSize(1, 1)
         }
         MediaInfo(uri, mime.ifBlank { "image/*" }, w, h, false)
+    }
+}
+
+suspend fun decodeImagePreview(
+    context: Context,
+    uri: Uri,
+    maxDimension: Int = 2048
+): Bitmap = withContext(Dispatchers.IO) {
+    val source = ImageDecoder.createSource(context.contentResolver, uri)
+    ImageDecoder.decodeBitmap(source) { decoder, info, _ ->
+        decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
+        decoder.isMutableRequired = false
+
+        val width = info.size.width.coerceAtLeast(1)
+        val height = info.size.height.coerceAtLeast(1)
+        val largest = maxOf(width, height)
+        if (largest > maxDimension) {
+            val ratio = maxDimension.toFloat() / largest.toFloat()
+            decoder.setTargetSize(
+                (width * ratio).roundToInt().coerceAtLeast(1),
+                (height * ratio).roundToInt().coerceAtLeast(1)
+            )
+        }
     }
 }
 
