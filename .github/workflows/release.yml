@@ -14,7 +14,7 @@ env:
 
 jobs:
   release:
-    name: Build signed release APK
+    name: Build and publish signed APK
     runs-on: ubuntu-latest
 
     steps:
@@ -33,17 +33,8 @@ jobs:
           yes | "$SDKMANAGER" --licenses >/dev/null || true
           "$SDKMANAGER" "platform-tools" "platforms;android-37.0" "build-tools;36.0.0"
 
-      - name: Set up Gradle 9.6
+      - name: Set up Gradle cache
         uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: '9.6.0'
-
-      - name: Restore Gradle wrapper if needed
-        run: |
-          if [ ! -f gradlew ]; then
-            gradle wrapper --gradle-version 9.6.0
-          fi
-          chmod +x gradlew
 
       - name: Prepare release signing
         env:
@@ -62,8 +53,10 @@ jobs:
           echo "ANDROID_KEY_ALIAS=$KEY_ALIAS" >> "$GITHUB_ENV"
           echo "ANDROID_KEY_PASSWORD=$KEY_PASSWORD" >> "$GITHUB_ENV"
 
-      - name: Build release APK
-        run: ./gradlew --no-daemon --stacktrace clean :app:assembleRelease
+      - name: Lint and build release APK
+        run: |
+          chmod +x gradlew
+          ./gradlew --no-daemon --stacktrace clean :app:lintRelease :app:assembleRelease
 
       - name: Verify APK signature
         run: "$ANDROID_HOME/build-tools/36.0.0/apksigner verify --verbose app/build/outputs/apk/release/app-release.apk"
