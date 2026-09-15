@@ -10,18 +10,15 @@ import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.zIndex
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -35,15 +32,14 @@ internal fun HtmlOverlay(
     onTransform: (Float, Float, Float) -> Unit,
     onWebViewReady: (WebView) -> Unit
 ) {
-    var view by remember { mutableStateOf<WebView?>(null) }
-    var widthPx by remember { mutableIntStateOf(1) }
-    var heightPx by remember { mutableIntStateOf(1) }
+    val widthPx = remember { mutableIntStateOf(1) }
+    val heightPx = remember { mutableIntStateOf(1) }
+    val document = remember(html, css) { buildHtmlDocument(html, css) }
 
     AndroidView(
         factory = { context ->
             WebView(context).apply {
                 setBackgroundColor(Color.TRANSPARENT)
-                setLayerType(View.LAYER_TYPE_SOFTWARE, null)
                 isVerticalScrollBarEnabled = false
                 isHorizontalScrollBarEnabled = false
                 overScrollMode = View.OVER_SCROLL_NEVER
@@ -55,43 +51,48 @@ internal fun HtmlOverlay(
                 settings.textZoom = 100
                 settings.setSupportZoom(false)
                 webViewClient = WebViewClient()
-                view = this
+
+                // Load the first document here instead of waiting for a Compose effect.
+                // The old effect could run while the WebView reference was still null,
+                // leaving a completely transparent/blank overlay until the editor changed.
+                tag = document
+                loadOverlayDocument(this, document)
                 onWebViewReady(this)
+            }
+        },
+        update = { webView ->
+            // AndroidView's update block is guaranteed to run with the actual view.
+            // Only reload when HTML/CSS changes so dragging and pinching do not refresh the page.
+            if (webView.tag != document) {
+                webView.tag = document
+                loadOverlayDocument(webView, document)
             }
         },
         modifier = Modifier
             .fillMaxSize()
+            .zIndex(1f)
             .onSizeChanged {
-                widthPx = it.width.coerceAtLeast(1)
-                heightPx = it.height.coerceAtLeast(1)
+                widthPx.intValue = it.width.coerceAtLeast(1)
+                heightPx.intValue = it.height.coerceAtLeast(1)
             }
             .graphicsLayer {
-                translationX = offsetX * widthPx
-                translationY = offsetY * heightPx
+                translationX = offsetX * widthPx.intValue
+                translationY = offsetY * heightPx.intValue
                 scaleX = scale
                 scaleY = scale
                 transformOrigin = TransformOrigin(0f, 0f)
             }
     )
 
-    LaunchedEffect(html, css, view) {
-        view?.loadDataWithBaseURL(
-            "https://overlayforge.local/",
-            buildHtmlDocument(html, css),
-            "text/html",
-            "utf-8",
-            null
-        )
-    }
-
     Box(
         Modifier
             .fillMaxSize()
-            .pointerInput(widthPx, heightPx) {
+            .zIndex(2f)
+            .pointerInput(widthPx.intValue, heightPx.intValue) {
                 detectTransformGestures { _, pan, zoom, _ ->
                     onTransform(
-                        pan.x / widthPx.toFloat(),
-                        pan.y / heightPx.toFloat(),
+                        pan.x / widthPx.intValue.toFloat(),
+                        pan.y / heightPx.intValue.toFloat(),
                         zoom
                     )
                 }
@@ -99,7 +100,18 @@ internal fun HtmlOverlay(
     )
 }
 
-private fun buildHtmlDocument(html: String, css: String): String = """
+private fun loadOverlayDocument(webView: WebView, document: String) {
+    webView.loadDataWithBaseURL(
+        "https://overlayforge.local/",
+        document,
+        "text/html",
+        "utf-8",
+        null
+    )
+    webView.postInvalidateOnAnimation()
+}
+
+internal fun buildHtmlDocument(html: String, css: String): String = """
 <!doctype html>
 <html>
 <head>
