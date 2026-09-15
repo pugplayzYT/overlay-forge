@@ -47,6 +47,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
@@ -178,6 +179,7 @@ private fun PhotoPreview(uri: Uri) {
     }
 }
 
+@androidx.annotation.OptIn(UnstableApi::class)
 @Composable
 private fun VideoPreview(uri: Uri) {
     val context = LocalContext.current
