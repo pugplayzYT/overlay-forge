@@ -1,0 +1,29 @@
+name: Bug report
+description: Report something that is broken
+title: "[Bug] "
+labels: [bug]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What happened?
+      description: Describe the problem and what you expected instead.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      placeholder: "1. Open...\n2. Import...\n3. Tap..."
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: Device and Android version
+      placeholder: "Galaxy S24+, Android 16"
+  - type: input
+    id: version
+    attributes:
+      label: OverlayForge version
+      placeholder: "v1.0.0"
