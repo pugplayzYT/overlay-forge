@@ -19,7 +19,7 @@ env:
 
 jobs:
   build:
-    name: Lint and build debug APK
+    name: Test, lint and build debug APK
     runs-on: ubuntu-latest
 
     steps:
@@ -41,10 +41,10 @@ jobs:
       - name: Set up Gradle cache
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Lint and compile
+      - name: Unit tests, lint and compile
         run: |
           chmod +x gradlew
-          ./gradlew --no-daemon --stacktrace :app:lintDebug :app:assembleDebug
+          ./gradlew --no-daemon --stacktrace :app:testDebugUnitTest :app:lintDebug :app:assembleDebug
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
