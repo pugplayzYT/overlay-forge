@@ -7,9 +7,11 @@ OverlayForge is an Android editor for burning transparent HTML + CSS overlays in
 
 ## Features
 
-- Custom charcoal/cyan Jetpack Compose UI — no stock purple Material look
+- Compact charcoal/cyan Jetpack Compose UI with system-bar-safe layout
 - Android system picker for photos and videos
+- Large photos are downsampled for preview so importing a high-resolution image does not exhaust app memory
 - Live transparent `WebView` preview for HTML + CSS
+- Responsive overlay viewport that follows the selected photo/video aspect ratio
 - Built-in HTML and CSS editor tabs
 - Drag to move the overlay and pinch to resize it
 - Looping Media3 video preview
@@ -17,7 +19,7 @@ OverlayForge is an Android editor for burning transparent HTML + CSS overlays in
 - MP4 export to `Movies/OverlayForge`
 - Original video audio is preserved
 - Media3 Transformer + `OverlayEffect` video rendering; no screen recording
-- Example game-style health bar on first launch
+- Responsive health-bar example that does not wrap or overflow on narrow/portrait media
 - Responsive split editor on wider displays
 
 ## Current limitation
@@ -39,7 +41,7 @@ JavaScript is deliberately disabled. Overlay content is HTML + CSS only.
 
 ## Build
 
-The repository includes the Gradle wrapper after the first CI bootstrap. Build a debug APK with:
+Build a debug APK with:
 
 ```bash
 ./gradlew :app:assembleDebug
