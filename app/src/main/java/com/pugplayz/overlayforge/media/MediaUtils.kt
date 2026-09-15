@@ -3,14 +3,13 @@ package com.pugplayz.overlayforge.media
 import android.content.ContentValues
 import android.content.Context
 import android.graphics.Bitmap
-import android.graphics.ImageDecoder
+import android.graphics.BitmapFactory
 import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.os.Environment
 import android.provider.MediaStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import kotlin.math.roundToInt
 
 data class MediaInfo(
     val uri: Uri,
@@ -45,17 +44,41 @@ suspend fun readMediaInfo(context: Context, uri: Uri): MediaInfo = withContext(D
             retriever.release()
         }
     } else {
-        var w = 1
-        var h = 1
-        val source = ImageDecoder.createSource(resolver, uri)
-        ImageDecoder.decodeBitmap(source) { decoder, info, _ ->
-            w = info.size.width
-            h = info.size.height
-            decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
-            decoder.setTargetSize(1, 1)
-        }
-        MediaInfo(uri, mime.ifBlank { "image/*" }, w, h, false)
+        val (width, height) = readImageBounds(context, uri)
+        MediaInfo(uri, mime.ifBlank { "image/*" }, width, height, false)
     }
+}
+
+internal fun readImageBounds(context: Context, uri: Uri): Pair<Int, Int> {
+    val options = BitmapFactory.Options().apply {
+        inJustDecodeBounds = true
+    }
+    context.contentResolver.openInputStream(uri).use { input ->
+        requireNotNull(input) { "Unable to open selected image" }
+        BitmapFactory.decodeStream(input, null, options)
+    }
+
+    val width = options.outWidth
+    val height = options.outHeight
+    require(width > 0 && height > 0) {
+        "Selected file is not a supported image"
+    }
+    return width to height
+}
+
+internal fun calculateInSampleSize(width: Int, height: Int, maxDimension: Int): Int {
+    require(width > 0 && height > 0)
+    require(maxDimension > 0)
+
+    var sample = 1
+    var sampledWidth = width
+    var sampledHeight = height
+    while (maxOf(sampledWidth, sampledHeight) > maxDimension * 2) {
+        sample *= 2
+        sampledWidth = width / sample
+        sampledHeight = height / sample
+    }
+    return sample.coerceAtLeast(1)
 }
 
 suspend fun decodeImagePreview(
@@ -63,30 +86,32 @@ suspend fun decodeImagePreview(
     uri: Uri,
     maxDimension: Int = 2048
 ): Bitmap = withContext(Dispatchers.IO) {
-    val source = ImageDecoder.createSource(context.contentResolver, uri)
-    ImageDecoder.decodeBitmap(source) { decoder, info, _ ->
-        decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
-        decoder.isMutableRequired = false
-
-        val width = info.size.width.coerceAtLeast(1)
-        val height = info.size.height.coerceAtLeast(1)
-        val largest = maxOf(width, height)
-        if (largest > maxDimension) {
-            val ratio = maxDimension.toFloat() / largest.toFloat()
-            decoder.setTargetSize(
-                (width * ratio).roundToInt().coerceAtLeast(1),
-                (height * ratio).roundToInt().coerceAtLeast(1)
-            )
-        }
+    val (width, height) = readImageBounds(context, uri)
+    val options = BitmapFactory.Options().apply {
+        inSampleSize = calculateInSampleSize(width, height, maxDimension)
+        inPreferredConfig = Bitmap.Config.ARGB_8888
+        inScaled = false
+        inMutable = false
     }
+
+    val bitmap = context.contentResolver.openInputStream(uri).use { input ->
+        requireNotNull(input) { "Unable to reopen selected image" }
+        BitmapFactory.decodeStream(input, null, options)
+    }
+    requireNotNull(bitmap) { "Android could not decode the selected image" }
 }
 
 suspend fun decodeImage(context: Context, uri: Uri): Bitmap = withContext(Dispatchers.IO) {
-    val source = ImageDecoder.createSource(context.contentResolver, uri)
-    ImageDecoder.decodeBitmap(source) { decoder, _, _ ->
-        decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
-        decoder.isMutableRequired = false
+    val options = BitmapFactory.Options().apply {
+        inPreferredConfig = Bitmap.Config.ARGB_8888
+        inScaled = false
+        inMutable = false
     }
+    val bitmap = context.contentResolver.openInputStream(uri).use { input ->
+        requireNotNull(input) { "Unable to open selected image" }
+        BitmapFactory.decodeStream(input, null, options)
+    }
+    requireNotNull(bitmap) { "Android could not decode the selected image" }
 }
 
 suspend fun savePngToGallery(context: Context, bitmap: Bitmap): Uri = withContext(Dispatchers.IO) {
