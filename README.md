@@ -29,7 +29,7 @@ JavaScript is deliberately disabled. Overlay content is HTML + CSS only.
 ## Requirements
 
 - Android 10 / API 29 or newer
-- Compile/target SDK 36
+- Compile SDK 37; target SDK 36
 - JDK 17
 - Android Gradle Plugin 9.4.0
 - Kotlin 2.3.21
